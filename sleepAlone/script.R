@@ -1,4 +1,5 @@
 library(tidyverse)
+library(knitr)
 
 d <- data[-c(1), -c(4, 5, 6, 7, 18, 19, 20, 21, 22, 23, 24)]
 names(data) <- c("relationship", "length", "sleepTogetherFrequency", 
@@ -36,11 +37,11 @@ d$cencusLocation <- as.factor(d$cencusLocation)
 
 #what kind of people do we have info on, anyways? Let's have an overview of our demographics
 d %>% filter(!is.na(gender)) %>% ggplot(aes(x = gender)) + geom_bar() #even split, slightly more male
-d %>% filter(!is.na(education)) %>% ggplot(aes(education)) + geom_bar() + coord_flip() #we have a HIGHLY educated sample
-d %>% filter(!is.na(ageGroup)) %>% ggplot(aes(x = ageGroup)) + geom_bar() #mostly middle aged people
-d %>% filter(!is.na(income)) %>% ggplot(aes(x = income)) + geom_bar() #weighted towards a richer demographic, though with a median around 100K
-d %>% filter(!is.na(relationship)) %>% ggplot(aes(x = relationship)) + geom_bar() + coord_flip() #we don't have enough of each to commend on anything
-d %>% filter(!is.na(length)) %>% ggplot(aes(length)) + geom_bar()
+d %>% filter(!is.na(education)) %>% ggplot(aes(education)) + geom_bar() + coord_flip() #we have a HIGHLY educated sample#
+#d %>% filter(!is.na(ageGroup)) %>% ggplot(aes(x = ageGroup)) + geom_bar() #mostly middle aged people
+#d %>% filter(!is.na(income)) %>% ggplot(aes(x = income)) + geom_bar() #weighted towards a richer demographic, though with a median around 100K
+#d %>% filter(!is.na(relationship)) %>% ggplot(aes(x = relationship)) + geom_bar() + coord_flip() #we don't have enough of each to commend on anything
+#d %>% filter(!is.na(length)) %>% ggplot(aes(length)) + geom_bar()
 #overall: our dataset is educated, wealthy, married, and around the middle age
 
 #add in columns for number of reasons
@@ -65,51 +66,48 @@ oneReason <- oneReason %>% mutate(reason = ifelse(snores, "snores",
                                      ifelse(workHours, "work",NA)))))))))))
 oneReason$reason <- as.factor(oneReason$reason)
 
-#what's the most common reasons?
+#what's the most common reasons people don't sleep together?
 base <- oneReason %>% group_by(reason) %>% summarize(counts = n()) 
 (commonOne <- base %>% ggplot(aes(reason, counts)) + geom_bar(stat = "identity") +
-  geom_text(aes(label = counts), vjust = -.3)) #snoring is the most common reason, then illness
+  geom_text(aes(label = counts), vjust = -.3)) +ggtitle("Reasons Why Partners Sleep Seperately") +
+  labs(y="Number of People", x = "Reason Why")
 
-#Plots the percentage breakdown of frequency of sleeping together by length
-d %>% filter(!is.na(length)) %>% 
-  ggplot(aes(length, fill = sleepTogetherFrequency)) + ylab("Percent") +
-  geom_bar(position = "fill") + coord_flip() + scale_fill_manual(values=c("#540D6E", "#EE4266", "#000000", "#FFD23F", "#3BCEAC", "#06823C"))
+#length of relationships and reason for NOT sleeping together by length of relationship
+oneReason %>% filter(!is.na(reason) & !is.na(length)) %>%filter(length != "Less than 1 year") %>% group_by(length) %>% 
+  ggplot(aes(x = length, fill = reason)) + 
+  geom_bar(position = "fill") + ylab("Percent") + coord_flip() +
+  ggtitle("Sleeping Together by Length of Relationship") +
+  labs(x="Length of Relationship", y = "Percent") + labs(fill = "Reason Why They Don't Sleep Together")
 
-withReason %>% filter(!is.na(sleepTogetherFrequency)) %>% 
+#length of relationships and reason for NOT sleeping together by age
+oneReason %>% filter(!is.na(reason) & !is.na(ageGroup)) %>% group_by(length) %>% 
+  ggplot(aes(x = ageGroup, fill = reason)) + 
+  geom_bar(position = "fill") + ylab("Percent") + coord_flip() +
+  ggtitle("Sleeping Together by Age Group") +
+  labs(x="Age Group of Partners", y = "Percent") + labs(fill = "Reason Why They Don't Sleep Together")
+
+
+
+#Plots the percentage breakdown of frequency of sleeping together by length, removing for people who never sleep together
+withReason %>% filter(!is.na(sleepTogetherFrequency)) %>% filter(length != "Less than 1 year") %>%
   ggplot(aes(length, fill = sleepTogetherFrequency)) + ylab("Percent") +
   geom_bar(position = "fill") + coord_flip() + scale_fill_manual(values=c("#540D6E", 
-                                    "#EE4266", "#FFD23F", "#3BCEAC", "#06823C"))
+                                                                          "#EE4266", "#FFD23F", "#3BCEAC", "#06823C")) +
+  ggtitle("Sleeping Together by Length of Relationship") +
+  labs(x="Length of Relationship", y = "Percent") + labs(fill = "Frequency of Sleeping Together")
 
-#does income lend trneds in sleeping together frequency?
-d %>% filter(!is.na(sleepTogetherFrequency) & !is.na(income)) %>% 
-  ggplot(aes(income, fill = sleepTogetherFrequency)) + ylab("Percent") +
-  geom_bar(position = "fill") + coord_flip() + scale_fill_manual(values=c("#540D6E", "#EE4266", "#000000", "#FFD23F", "#3BCEAC", "#06823C"))
-
-withReason %>% filter(!is.na(sleepTogetherFrequency) & !is.na(income)) %>% 
-  ggplot(aes(income, fill = sleepTogetherFrequency)) + ylab("Percent") +
-  geom_bar(position = "fill") + coord_flip() + scale_fill_manual(values=c("#540D6E", 
-                                                                          "#EE4266", "#FFD23F", "#3BCEAC", "#06823C"))
-
-#what's the major factors by education?
-withReason %>% filter(!is.na(sleepTogetherFrequency) & !is.na(education) & education != "Less than high school degree") %>% 
+#education affects frequency of sleeping together
+withReason %>% filter(!is.na(sleepTogetherFrequency)) %>% filter(education != "Less than high school degree") %>% 
   ggplot(aes(education, fill = sleepTogetherFrequency)) + ylab("Percent") +
   geom_bar(position = "fill") + coord_flip() + scale_fill_manual(values=c("#540D6E", 
-                                                                          "#EE4266", "#FFD23F", "#3BCEAC", "#06823C"))
-#To investigate by agegroup:
-oneReason %>% filter(!is.na(reason) & !is.na(ageGroup)) %>% group_by(ageGroup) %>% ggplot(aes(x = ageGroup, fill = reason)) + geom_bar(position = "fill") + ylab("Percent") + coord_flip()
+                                                                          "#EE4266", "#FFD23F", "#3BCEAC", "#06823C")) +
+  ggtitle("Sleeping Together by Education of Partners") +
+  labs(x="Education Level", y = "Percent") + labs(fill = "Frequency of Sleeping Together")
 
-oneReason %>% filter(!is.na(reason) & !is.na(ageGroup)) %>% group_by(ageGroup) %>% ggplot(aes(x = ageGroup, fill = reason)) + geom_bar() + coord_flip()
-
-#To investigate this stration by education:
-oneReason %>% filter(!is.na(reason) & !is.na(education)) %>% group_by(education) %>% ggplot(aes(x = education, fill = reason)) + geom_bar(position = "fill") + ylab("Percent") + coord_flip()
-
-oneReason %>% filter(!is.na(reason) & !is.na(education)) %>% group_by(education) %>% ggplot(aes(x = education, fill = reason)) + geom_bar() + coord_flip()
-
-#To investigate this stration by income:
-oneReason %>% filter(!is.na(reason) & !is.na(income)) %>% group_by(income) %>% ggplot(aes(x = income, fill = reason)) + geom_bar(position = "fill") + ylab("Percent") + coord_flip()
-
-oneReason %>% filter(!is.na(reason) & !is.na(income)) %>% group_by(income) %>% ggplot(aes(x = income, fill = reason)) + geom_bar() + coord_flip()
-
-#Let's see if there are reason differences between the sexes:
-oneReason %>% filter(!is.na(reason) & !is.na(gender)) %>% group_by(reason) %>% ggplot(aes(x = reason, fill = gender)) + geom_bar(position = "fill") + ylab("Percent") 
-oneReason %>% filter(!is.na(reason) & !is.na(gender)) %>% group_by(reason) %>% ggplot(aes(x = reason, fill = gender)) + geom_bar()
+#possible point of bias - wealthier, more educated people
+d %>% filter(!is.na(education)) %>% ggplot(aes(education)) + geom_bar() + 
+  ggtitle("Respondent Education Distribution") + coord_flip() +
+  labs(x="Education Level", y = "Number of Respondents") + labs(fill = "Frequency of Sleeping Together")
+d %>% filter(!is.na(income)) %>% ggplot(aes(income)) + geom_bar() + 
+  ggtitle("Respondent Income Distribution") + coord_flip() +
+  labs(x="Income Level", y = "Number of Respondents") + labs(fill = "Frequency of Sleeping Together")
